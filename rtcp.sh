@@ -42,7 +42,7 @@ EOF
 
 echo "$BANNER"
 
-FORCEUMOUNT="force" #unset this if you don't want to forcefully unmount drives
+FORCEUMOUNT="" #unset this if you don't want to forcefully unmount drives
 
 DISKNAME="RESTHUMB"
 TARTGTS="Ass* Removers* Drive* Gen* Anti* Mac* RIT* ResTool*"
