@@ -148,7 +148,7 @@ if [ `id -u` != "0" ]; then
 fi
 
 OUTPUT="$(diskutil list | \
-    sed -En 's/\*([0-9.]*) GB[ \t]*(disk[[:digit:]]+)$/#\1:\2/p' | \
+    sed -En 's/\*([0-9.]*) G[Bi][ \t]*(disk[[:digit:]]+)$/#\1:\2/p' | \
     cut -d# -f2)"
 
 for DISK in $OUTPUT; do
@@ -162,14 +162,14 @@ for DISK in $OUTPUT; do
         else
             PLAIN="${PLAIN} $NAME"
         fi
-        diskutil unmountDisk "$FORCEUMOUNT" "$NAME"
+        diskutil unmountDisk $FORCEUMOUNT "$NAME"
         diskutil eject "DONOTUSE" >/dev/null 2>/dev/null
         diskutil eject "DO NOT USE" >/dev/null 2>/dev/null
         #The above line gets rid of annoying DO NOT USE partitions
     fi
 done
 
-if [ -n $NONROOT ]; then
+if [ -n "$NONROOT" ]; then
     PLAIN="$PLAIN $ULTRA"
     ULTRA=""
 fi
