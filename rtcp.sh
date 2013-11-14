@@ -268,7 +268,7 @@ if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
     #everyone needs rw access for the imagescan to properly work
     asr imagescan --source "$DMGLOC"
     #now change it back
-    chmod =rw "$DMGLOC"
+    chmod "=rw" "$DMGLOC"
 fi
 
 else
