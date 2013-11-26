@@ -31,8 +31,6 @@ read -d '' BANNER << 'EOF'
 [0;37m################################################################################[0m
 EOF
 
-echo "$BANNER\n"
-
 FORCEUMOUNT="" #unset this if you don't want to forcefully unmount drives
 
 DISKNAME="RESTHUMB"
@@ -137,6 +135,8 @@ if [ $( id -u ) != "0" ]; then
 
     NONROOT="YUP"
 fi
+
+echo "$BANNER\n"
 
 OUTPUT="$( diskutil list | \
     sed -En 's/\*([0-9.]*) G[Bi][ \t]*(disk[[:digit:]]+)$/#\1:\2/p' | \
