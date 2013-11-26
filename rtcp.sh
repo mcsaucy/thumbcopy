@@ -47,7 +47,7 @@ TARTMP="/tmp/resthumb.tar"
 
 DMGLOC="/var/tmp/UBRESTHUMB.dmg"
 
-THUMBDIR=`mount | grep -i "$THUMBIMG_RE" | cut -d\  -f3`
+THUMBDIR=$( mount | grep -i "$THUMBIMG_RE" | cut -d\  -f3 )
 if [ -z "$THUMBDIR" ]; then
     THUMBDIR=/tmp/thumbimage   #   CHANGE ME TO FIT YOUR NEEDS!    #
     THMBMNTD=""
@@ -64,7 +64,7 @@ function createThumb()
 {
     diskutil mount "/dev/${1}s1" >/dev/null
     RC=$?
-    MNTPT=`getMntpt ${1}s1`
+    MNTPT=$( getMntpt ${1}s1 )
     RC=$(( $RC | $? ))
     stat "$MNTPT" >/dev/null
     RC=$(( $RC | $? ))
@@ -73,7 +73,7 @@ function createThumb()
         echo "Please make sure it is formatted and clean first." >&2
         false
     else
-        cat "$TARLOC" | tar -xC "`getMntpt ${1}s1`"
+        cat "$TARLOC" | tar -xC "$( getMntpt ${1}s1 )"
         #TODO: see if we can have this use a status bar
     fi
 }
@@ -85,8 +85,8 @@ function getMntpt()
 
 function makePlain()
 {
-    MODEL=`diskutil info $1 | grep --color=never "Media Name" | \
-        cut -d: -f2 | sed -En "s/[ \t]*([a-zA-Z0-9].*)/\1/p"`
+    MODEL=$( diskutil info $1 | grep --color=never "Media Name" | \
+        cut -d: -f2 | sed -En "s/[ \t]*([a-zA-Z0-9].*)/\1/p" )
     wipe $1
     createThumb $1
     if [ $? -ne 0 ]; then
@@ -103,8 +103,8 @@ function makePlain()
 
 function makeUltra()
 {
-    MODEL=`diskutil info $1 | grep --color=never "Media Name" | \
-        cut -d: -f2 | sed -En "s/[ \t]*([a-zA-Z0-9].*)/\1/p"`
+    MODEL=$( diskutil info $1 | grep --color=never "Media Name" | \
+        cut -d: -f2 | sed -En "s/[ \t]*([a-zA-Z0-9].*)/\1/p" )
     asr restore --source "$DMGLOC" --target "/dev/$1" --erase --noprompt
     if [ $? -ne 0 ]; then
         echo "Failed to apply "$DMGLOC" image to $1. Falling back to plain." >&2
@@ -124,7 +124,7 @@ function makeUltra()
     fi
 }
 
-if [ `id -u` != "0" ]; then
+if [ $( id -u ) != "0" ]; then
     echo "!!! This script is NOT being run as ROOT. Any drives made    !!!" >&2
     echo "!!! without root access will not have UBCD functionality.    !!!" >&2
     echo "\nAttempt to elevate? [y/N]  \c"
@@ -138,13 +138,13 @@ if [ `id -u` != "0" ]; then
     NONROOT="YUP"
 fi
 
-OUTPUT="$(diskutil list | \
+OUTPUT="$( diskutil list | \
     sed -En 's/\*([0-9.]*) G[Bi][ \t]*(disk[[:digit:]]+)$/#\1:\2/p' | \
-    cut -d# -f2)"
+    cut -d# -f2 )"
 
 for DISK in $OUTPUT; do
-    SIZE=`echo $DISK | cut -d: -f1`
-    NAME=`echo $DISK | cut -d: -f2`
+    SIZE=$( echo $DISK | cut -d: -f1 )
+    NAME=$( echo $DISK | cut -d: -f2 )
     diskutil list $NAME | grep -i "$DISKNAME" >/dev/null 2>/dev/null
     if [[ $? == 0  ]]; then
         DISKS="${DISKS} $DISK"
@@ -163,7 +163,7 @@ done
 if [ -n "$NONROOT" ]; then
     PLAIN="$PLAIN $ULTRA"
     ULTRA=""
-fi
+    fi
 
 if [ -z "$DISKS" ]; then
     echo "No usable drives are present. Make sure the target drives all have"
@@ -187,7 +187,7 @@ echo ULTRA -- $ULTRA
 echo PLAIN -- $PLAIN
 echo
 
-MTIME=`stat -f %m "$TARLOC" 2>/dev/null`
+MTIME=$( stat -f %m "$TARLOC" 2>/dev/null )
 RC=$?
 
 trap "{ killall tar 2>/dev/null >/dev/null; exit 255; }" SIGINT SIGTERM
@@ -195,7 +195,7 @@ trap "{ killall tar 2>/dev/null >/dev/null; exit 255; }" SIGINT SIGTERM
 if [ $RC -ne 0 ]; then
     BUILDTAR='one does not currently exist.'
 else
-    TIMEDIFF=$(( `date +%s` - $MTIME ))
+    TIMEDIFF=$(( $( date +%s ) - $MTIME ))
     if [ $TIMEDIFF -lt 0 ]; then
         echo "You must be a wizard or know how to use touch or something..." >&2
         echo "FORCING REBUILD" >&2
