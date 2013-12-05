@@ -53,6 +53,8 @@ else
     THMBMNTD="MOUNTED"
 fi
 
+DMGSHRLOC="${THUMBDIR}/UBCD/UBRESTHUMB.dmg"
+
 function wipe()
 {
     diskutil eraseDisk MS-DOS "$DISKNAME" MBRFormat "$1" >/dev/null
@@ -143,12 +145,12 @@ OUTPUT="$( diskutil list | \
     cut -d# -f2 )"
 
 for DISK in $OUTPUT; do
-    SIZE=$( echo $DISK | cut -d: -f1 )
     NAME=$( echo $DISK | cut -d: -f2 )
+    SIZE=$( diskutil info "$NAME" | grep "Total Size:" | cut -d'(' -f2 | cut -d' ' -f1 )
     diskutil list $NAME | grep -i "$DISKNAME" >/dev/null 2>/dev/null
     if [[ $? == 0  ]]; then
         DISKS="${DISKS} $DISK"
-        if [[ $SIZE > 1.9 ]]; then
+        if [[ $SIZE > 1900000000 ]]; then
             ULTRA="${ULTRA} $NAME"
         else
             PLAIN="${PLAIN} $NAME"
@@ -195,7 +197,7 @@ trap "{ killall tar 2>/dev/null >/dev/null; exit 255; }" SIGINT SIGTERM
 if [ $RC -ne 0 ]; then
     BUILDTAR='one does not currently exist.'
 else
-    TIMEDIFF=$(( $( date +%s ) - $MTIME ))
+    TIMEDIFF=$( $( date +%s ) - $MTIME )
     if [ $TIMEDIFF -lt 0 ]; then
         echo "You must be a wizard or know how to use touch or something..." >&2
         echo "FORCING REBUILD" >&2
@@ -249,17 +251,20 @@ if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
         #like /tmp is a RAM disk for OS X (at least in 10.8). This isn't as 
         #viable for Linux (if this ever gets ported) and compression would be 
         #something worth looking into.
+        
         RC=$?
         if [ $RC -ne 0 ]; then
             echo "Failed to create $TARLOC properly." >&2
             echo "Double check drive when complete." >&2
-     else
+        else
             echo "Finished building $TARLOC"
+            [[ -e $SUDO_USER ]] && chown "${SUDO_UID}:${SUDO_GID}" "$TARLOC"
         fi
+
     fi
     if [ -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
     echo "Copying over the UBCD image to ${DMGLOC}. This may take some time."
-    cp "${THUMBDIR}/UBCD/UBRESTHUMB.dmg" "$DMGLOC"
+    cp "$DMGSHRLOC" "$DMGLOC"
     if [ $? -ne 0 ]; then
         echo "Failed to copy over ${DMGLOC}. Skipping all UBCD-capable drives." >&2
         NONROOT="Failed to copy"
