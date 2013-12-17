@@ -46,12 +46,14 @@ TARTMP="/tmp/resthumb.tar"
 DMGLOC="/var/tmp/UBRESTHUMB.dmg"
 
 THUMBDIR=$( mount | grep -i "$THUMBIMG_RE" | cut -d\  -f3 )
-if [ -z "$THUMBDIR" ]; then
+if [[ -z "$THUMBDIR" ]]; then
     THUMBDIR=/tmp/thumbimage   #   CHANGE ME TO FIT YOUR NEEDS!    #
     THMBMNTD=""
 else
     THMBMNTD="MOUNTED"
 fi
+
+ULTRASIZE=1900000000    #   The recommended size for an "ultra" drive
 
 DMGSHRLOC="${THUMBDIR}/UBCD/UBRESTHUMB.dmg"
 
@@ -68,7 +70,7 @@ function createThumb()
     RC=$(( $RC | $? ))
     stat "$MNTPT" >/dev/null
     RC=$(( $RC | $? ))
-    if [ $RC -ne 0 ]; then
+    if [[ $RC -ne 0 ]]; then
         echo "Failed to either mount ${1}s1 or locate its mount point." >&2
         echo "Please make sure it is formatted and clean first." >&2
         false
@@ -89,7 +91,7 @@ function makePlain()
         cut -d: -f2 | sed -En "s/[ \t]*([a-zA-Z0-9].*)/\1/p" )
     wipe $1
     createThumb $1
-    if [ $? -ne 0 ]; then
+    if [[ $? -ne 0 ]]; then
         echo "Failed to image drive $1. It's probably worth retrying." >&2
         echo "The drive that failed was a $MODEL drive." >&2
         echo >&2
@@ -106,32 +108,34 @@ function makeUltra()
     MODEL=$( diskutil info $1 | grep --color=never "Media Name" | \
         cut -d: -f2 | sed -En "s/[ \t]*([a-zA-Z0-9].*)/\1/p" )
     asr restore --source "$DMGLOC" --target "/dev/$1" --erase --noprompt
-    if [ $? -ne 0 ]; then
+    if [[ $? -ne 0 ]]; then
         echo "Failed to apply "$DMGLOC" image to $1. Falling back to plain." >&2
         makePlain $1
     else
         createThumb $1
-        if [ $? -ne 0 ]; then
+        if [[ $? -ne 0 ]]; then
             echo "Failed to image drive $1. It's probably worth retrying." >&2
             echo "The drive that failed was a $MODEL drive." >&2
             echo >&2
             RC=1
         else
             echo
+            sync
+            sleep 3
             diskutil eject "$1"
             echo "$1 ($MODEL) has been imaged with UBCD support and ejected.\a"
         fi
     fi
 }
 
-if [ $( id -u ) != "0" ]; then
+if [[ $( id -u ) != "0" ]]; then
     echo "!!! This script is NOT being run as ROOT. Any drives made    !!!" >&2
     echo "!!! without root access will not have UBCD functionality.    !!!" >&2
     echo "\nAttempt to elevate? [y/N]  \c"
     read ELEVATE
     echo "yeah\nyup\nyep\ny\nyes\nsure\nok\ngo for it\naffirmative" | \
         grep -i "^$ELEVATE$" >/dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
+    if [[ $? -eq 0 ]]; then
         exec sudo "$0" "$*"
     fi
 
@@ -146,11 +150,13 @@ OUTPUT="$( diskutil list | \
 
 for DISK in $OUTPUT; do
     NAME=$( echo $DISK | cut -d: -f2 )
-    SIZE=$( diskutil info "$NAME" | grep "Total Size:" | cut -d'(' -f2 | cut -d' ' -f1 )
+    TOTSIZE=$( diskutil info "$NAME" | grep "Total Size:" )
+    SIZE=$( echo "$TOTSIZE" | grep -o '([0-9]\+ ' | tr -d '(' )
+    # READBLESIZE=$( echo "$TOTSIZE" | grep -o '[0-9]\+\.[0-9] [KMGTP]B' )
     diskutil list $NAME | grep -i "$DISKNAME" >/dev/null 2>/dev/null
     if [[ $? == 0  ]]; then
         DISKS="${DISKS} $DISK"
-        if [[ $SIZE > 1900000000 ]]; then
+        if [[ $SIZE > $ULTRASIZE ]]; then
             ULTRA="${ULTRA} $NAME"
         else
             PLAIN="${PLAIN} $NAME"
@@ -162,12 +168,12 @@ for DISK in $OUTPUT; do
     fi
 done
 
-if [ -n "$NONROOT" ]; then
+if [[ -n "$NONROOT" ]]; then
     PLAIN="$PLAIN $ULTRA"
     ULTRA=""
     fi
 
-if [ -z "$DISKS" ]; then
+if [[ -z "$DISKS" ]]; then
     echo "No usable drives are present. Make sure the target drives all have"
     echo "$DISKNAME present in their volumes names. If you just want to do a"
     echo "dry run, press [RETURN]. This will also prepare files for future"
@@ -192,27 +198,27 @@ echo
 MTIME=$( stat -f %m "$TARLOC" 2>/dev/null )
 RC=$?
 
-trap "{ killall tar 2>/dev/null >/dev/null; exit 255; }" SIGINT SIGTERM
+trap "{ pkill -TERM -P $$ 2>/dev/null >/dev/null; exit 255; }" SIGINT SIGTERM
 
-if [ $RC -ne 0 ]; then
+if [[ $RC -ne 0 ]]; then
     BUILDTAR='one does not currently exist.'
 else
-    TIMEDIFF=$( $( date +%s ) - $MTIME )
-    if [ $TIMEDIFF -lt 0 ]; then
+    (( TIMEDIFF= $( date +%s ) - $MTIME ))
+    if [[ $TIMEDIFF -lt 0 ]]; then
         echo "You must be a wizard or know how to use touch or something..." >&2
         echo "FORCING REBUILD" >&2
         BUILDTAR='you are a sorcerer who must be purified with flame.'
-    elif [ $TIMEDIFF -gt 21600 ]; then
+    elif [[ $TIMEDIFF -gt 21600 ]]; then
         echo "Existing $TARLOC is older than 6 hours. Rebuilding."
         BUILDTAR='the existing archive has expired.'
     fi
 fi
 
-if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
+if [[ -n "$BUILDTAR" || -n "$GRABDMG" || -z "$NONROOT" && ! -e "$DMGLOC" ]]; then
     mkdir $THUMBDIR >/dev/null 2>/dev/null
     stat $THUMBDIR >/dev/null 2>/dev/null
     RC=$?
-    if [ $RC -ne 0 ]; then
+    if [[ $RC -ne 0 ]]; then
         echo "Could not create the '$THUMBDIR' directory or it cannot" >&2
         echo "be accessed as is. Ensure that THUMBDIR is set properly" >&2
         echo "near the top of this file and that you have the required" >&2
@@ -220,13 +226,13 @@ if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
         exit $RC
     fi
 
-    if [ -z "$THMBMNTD" ]; then
+    if [[ -z "$THMBMNTD" ]]; then
         echo "Preparing to mount thumbimage. Please enter the password"
         echo "for the thumbimage account when prompted."
         echo
         mount_smbfs "$THUMBIMG" "$THUMBDIR"
         RC=$?
-        if [ $RC -ne 0 ]; then
+        if [[ $RC -ne 0 ]]; then
             echo "Failed to mount thumbimage. Based upon previous checks," >&2
             echo "thumbimage is not already mounted. Make sure you didn't" >&2
             echo "fat-finger the password, that thumbimage isn't already" >&2
@@ -237,7 +243,7 @@ if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
         fi
     fi
 
-    if [ -n "$BUILDTAR" ]; then
+    if [[ -n "$BUILDTAR" ]]; then
          echo "Building a $TARLOC because $BUILDTAR"
         echo "Note: this may take a while..."
         cd "$THUMBDIR"
@@ -253,7 +259,7 @@ if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
         #something worth looking into.
         
         RC=$?
-        if [ $RC -ne 0 ]; then
+        if [[ $RC -ne 0 ]]; then
             echo "Failed to create $TARLOC properly." >&2
             echo "Double check drive when complete." >&2
         else
@@ -262,10 +268,10 @@ if [ -n "$BUILDTAR" -o -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
         fi
 
     fi
-    if [ -n "$GRABDMG" -o -z "$NONROOT" -a ! -e "$DMGLOC" ]; then
+    if [[ -n "$GRABDMG" || -z "$NONROOT" && ! -e "$DMGLOC" ]]; then
     echo "Copying over the UBCD image to ${DMGLOC}. This may take some time."
     cp "$DMGSHRLOC" "$DMGLOC"
-    if [ $? -ne 0 ]; then
+    if [[ $? -ne 0 ]]; then
         echo "Failed to copy over ${DMGLOC}. Skipping all UBCD-capable drives." >&2
         NONROOT="Failed to copy"
     fi
