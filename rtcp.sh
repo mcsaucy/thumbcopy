@@ -181,7 +181,7 @@ if [[ -z "$DISKS" ]]; then
     echo "press Ctrl-C now and we'll pretend nothing happened. [CONTINUE?]"
     read
     BUILDTAR="a dry run has been initiated. Updating all files."
-    GRABDMG="a dry run has been initiated. Updating all files."
+    GRABDMG="$BUILDTAR"
 fi
 
 echo
@@ -247,7 +247,7 @@ if [[ -n "$BUILDTAR" || -n "$GRABDMG" || -z "$NONROOT" && ! -e "$DMGLOC" ]]; the
          echo "Building a $TARLOC because $BUILDTAR"
         echo "Note: this may take a while..."
         cd "$THUMBDIR"
-        tar -cvf "$TARTMP" $TARTGTS
+        echo "$TARTGTS" | xargs | tar -cvf "$TARTMP"
         mv "$TARTMP" "$TARLOC"
         #This extra step prevents an interrupted run from corrupting our tar.
         #This matters because we never check the integrity of the archive in
