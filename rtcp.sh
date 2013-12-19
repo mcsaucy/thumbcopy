@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ###############################################################################
 #
 #   UBRESTHUMB CREATION SCRIPT
@@ -47,7 +47,7 @@ DMGLOC="/var/tmp/UBRESTHUMB.dmg"
 
 THUMBDIR=$( mount | grep -i "$THUMBIMG_RE" | cut -d\  -f3 )
 if [[ -z "$THUMBDIR" ]]; then
-    THUMBDIR=/tmp/thumbimage   #   CHANGE ME TO FIT YOUR NEEDS!    #
+    THUMBDIR=/Volumes/thumbimage   #   CHANGE ME TO FIT YOUR NEEDS!    #
     THMBMNTD=""
 else
     THMBMNTD="MOUNTED"
@@ -215,8 +215,8 @@ else
 fi
 
 if [[ -n "$BUILDTAR" || -n "$GRABDMG" || -z "$NONROOT" && ! -e "$DMGLOC" ]]; then
-    mkdir $THUMBDIR >/dev/null 2>/dev/null
-    stat $THUMBDIR >/dev/null 2>/dev/null
+    mkdir "$THUMBDIR" >/dev/null 2>/dev/null
+    stat "$THUMBDIR" >/dev/null 2>/dev/null
     RC=$?
     if [[ $RC -ne 0 ]]; then
         echo "Could not create the '$THUMBDIR' directory or it cannot" >&2
@@ -247,7 +247,7 @@ if [[ -n "$BUILDTAR" || -n "$GRABDMG" || -z "$NONROOT" && ! -e "$DMGLOC" ]]; the
          echo "Building a $TARLOC because $BUILDTAR"
         echo "Note: this may take a while..."
         cd "$THUMBDIR"
-        echo "$TARTGTS" | xargs | tar -cvf "$TARTMP"
+        tar -cvf "$TARTMP" $TARTGTS
         mv "$TARTMP" "$TARLOC"
         #This extra step prevents an interrupted run from corrupting our tar.
         #This matters because we never check the integrity of the archive in
@@ -291,6 +291,8 @@ echo "Preparing to image drives. If all goes as planned, the drivers will be"
 echo "imaged asynchronously through separate processes. You will be notified"
 echo "when a drive finishes or fails. Whichever comes first."
 echo
+echo "PROTIP: if you think the script is hanging, press CTRL-T for info."
+echo
 
 for DISK in $PLAIN; do
     makePlain $DISK &
@@ -299,6 +301,7 @@ done
 for DISK in $ULTRA; do
     makeUltra $DISK &
 done
+
 wait
 
 echo
@@ -306,5 +309,4 @@ echo "Script is DONE! Thanks for playing. For the sake of mass, repeated"
 echo "deployments, the thumbimage share is still mounted. The script does"
 echo "check to see if the share is already mounted, so it shouldn't cause"
 echo "any problems."
-
 
