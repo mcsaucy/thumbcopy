@@ -45,7 +45,7 @@ TARTMP="/tmp/resthumb.tar"
 
 DMGLOC="/var/tmp/UBRESTHUMB.dmg"
 
-THUMBDIR=$( mount | grep -i "$THUMBIMG_RE" | cut -d\  -f3 )
+THUMBDIR=$( mount | grep -i "$THUMBIMG_RE" | head -n 1 | cut -d' ' -f3 )
 if [[ -z "$THUMBDIR" ]]; then
     THUMBDIR=/Volumes/thumbimage   #   CHANGE ME TO FIT YOUR NEEDS!    #
     THMBMNTD=""
@@ -264,7 +264,8 @@ if [[ -n "$BUILDTAR" || -n "$GRABDMG" || -z "$NONROOT" && ! -e "$DMGLOC" ]]; the
             echo "Double check drive when complete." >&2
         else
             echo "Finished building $TARLOC"
-            [[ -e $SUDO_USER ]] && chown "${SUDO_UID}:${SUDO_GID}" "$TARLOC"
+            #One-liner to chown the TAR so users can remove it if they want
+            [[ -n $SUDO_USER && $UID == 0]] && chown "${SUDO_UID}:${SUDO_GID}" "$TARLOC"
         fi
 
     fi
